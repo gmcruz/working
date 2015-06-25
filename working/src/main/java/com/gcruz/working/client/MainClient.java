@@ -31,6 +31,8 @@ public class MainClient {
     static Connection conn_OLD = null;
     static Map tablesAndCounts = new HashMap<Integer, String>();
     
+    
+    
     public static void main(String[] args) throws Exception {
        // Class.forName("org.h2.Driver"); Needed ?
         
@@ -94,9 +96,10 @@ public class MainClient {
         } catch (SQLException e ) {
             System.out.println(e.getMessage());
         } finally {
-            if (stmt != null) { stmt.close(); }
+            if (stmt != null) { stmt.close(); }            
         }
         
+       System.out.println("**getThisNewDBsTables DONE. NUM Records: " + tablesAndCounts.size());
        
     }
     
@@ -135,7 +138,7 @@ public class MainClient {
         Statement stmt = null;
         String csvColumns = thisTablesColumns.toString().replace("[", "").replace("]", "").replace(", ", ",");
         String queryGetRows = "SELECT " + csvColumns + " FROM " + tableName;
-        
+        int count = 0;
        
          try { 
             stmt = conn_OLD.createStatement();
@@ -144,14 +147,16 @@ public class MainClient {
 
                 String columnname = rs.getString(thisTablesColumns.get(1));
                 String ordinal = rs.getString(thisTablesColumns.get(2));
-
-                System.out.println("     values:" + columnname + " ordi:" + ordinal);
+                
+                count++;
+                //System.out.println("     values:" + columnname + " ordi:" + ordinal);
 
             }
         } catch (SQLException e ) {
             System.out.println(e.getMessage());
         } finally {
             if (stmt != null) { stmt.close(); }
+            System.out.println(tableName + " looped over " + count + " times.");
         }
 
     }
