@@ -22,9 +22,10 @@ import java.util.Map;
  * @author cruz
  */
 public class MainClient {
-    
-    static String dsname_OLD = "jdbc:h2:C:\\Users\\Cruz\\mpi_main_24062015"; //Our last release db
-    static String dsname_NEW = "jdbc:h2:D:\\Projekte\\Software\\MMI-Service-Platform-v2\\trunk\\Java\\MMIServicePlatformV2\\db\\mpi_main"; //NEW database with changes 
+//C:\\Training\\MMI\\mpi_main_24062015 C:\\Training\\MMI\\db\\mpi_main    
+//C:\\Users\\Cruz\\mpi_main_24062015 D:\\Projekte\\Software\\MMI-Service-Platform-v2\\trunk\\Java\\MMIServicePlatformV2\\db\\mpi_main
+    static String dsname_OLD = "jdbc:h2:"; //Our last release db
+    static String dsname_NEW = "jdbc:h2:"; //NEW database with changes 
     static String username = "sa";
     static String password = "b1l8u1b9b6e5r";
     static Connection conn_NEW = null;
@@ -36,7 +37,9 @@ public class MainClient {
     public static void main(String[] args) throws Exception {
        // Class.forName("org.h2.Driver"); Needed ?
         
-        try{
+        try{            
+           dsname_OLD = dsname_OLD + args[1];
+           dsname_OLD = dsname_NEW + args[2];
            conn_NEW = DriverManager.getConnection(dsname_NEW, username, password);
            conn_OLD = DriverManager.getConnection(dsname_OLD, username, password);
            startThisRun(); 
