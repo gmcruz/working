@@ -35,13 +35,13 @@ public class MainClient {
     public static final String ANSI_CYAN = "\u001B[36m";
     public static final String ANSI_WHITE = "\u001B[37m";
     
-    
+ /*   
     static String dsname_OLD = "jdbc:h2:C:\\Users\\Cruz\\mpi_arv_24062015"; //Our last release db
     static String dsname_NEW = "jdbc:h2:D:\\Projekte\\Software\\MMI-Service-Platform-v2\\trunk\\Java\\MMIServicePlatformV2\\db\\mpi_arv"; //NEW database with changes 
-/*
-    static String dsname_OLD = "jdbc:h2:C:\\Training\\MMI\\mpi_main_24062015"; //Our last release db
-    static String dsname_NEW = "jdbc:h2:C:\\Training\\MMI\\db\\mpi_main"; //NEW database with changes 
- */   
+*/
+    static String dsname_OLD = "jdbc:h2:C:\\Training\\MMI\\mpi_arv_24062015"; //Our last release db
+    static String dsname_NEW = "jdbc:h2:C:\\Training\\MMI\\db\\mpi_arv"; //NEW database with changes 
+    
     
     static String username = "sa";
     static String password = "b1l8u1b9b6e5r";
