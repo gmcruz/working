@@ -35,13 +35,13 @@ public class MainClient {
     public static final String ANSI_CYAN = "\u001B[36m";
     public static final String ANSI_WHITE = "\u001B[37m";
     
- /*   
+ 
     static String dsname_OLD = "jdbc:h2:C:\\Users\\Cruz\\mpi_arv_24062015"; //Our last release db
     static String dsname_NEW = "jdbc:h2:D:\\Projekte\\Software\\MMI-Service-Platform-v2\\trunk\\Java\\MMIServicePlatformV2\\db\\mpi_arv"; //NEW database with changes 
-*/
+/*
     static String dsname_OLD = "jdbc:h2:C:\\Training\\MMI\\mpi_arv_24062015"; //Our last release db
     static String dsname_NEW = "jdbc:h2:C:\\Training\\MMI\\db\\mpi_arv"; //NEW database with changes 
-    
+ */   
     
     static String username = "sa";
     static String password = "b1l8u1b9b6e5r";
@@ -53,11 +53,7 @@ public class MainClient {
     
     public static void main(String[] args) throws Exception {
         
-        try{            
-/*
-           dsname_OLD = dsname_OLD + args[1];
-           dsname_OLD = dsname_NEW + args[2];
-*/
+        try{
            conn_NEW = DriverManager.getConnection(dsname_NEW, username, password);
            conn_OLD = DriverManager.getConnection(dsname_OLD, username, password);
            startThisRun(); 
@@ -83,7 +79,7 @@ public class MainClient {
             
             while (it.hasNext()) {
                 Map.Entry pair = (Map.Entry) it.next();
-                System.out.println("tablesAndCounts: says " + pair.getValue() + " has " + pair.getKey() + " row(s)");    
+                System.out.println("tablesAndCounts: says " + pair.getValue() + " has " + ANSI_GREEN + pair.getKey() + ANSI_RESET + " row(s)");    
                 loopTableAndCompare(pair.getValue().toString(), getThisTablesColumns(pair.getValue().toString()));
             }
                         
@@ -145,17 +141,17 @@ public class MainClient {
         
         return columns;     
     }
-
+    
     private static void loopTableAndCompare(String tableName, List<String> thisTablesColumns) throws SQLException {
         
-        Statement stmt = null;
+        Statement stmt_NEW = null;       
         String columnNames = "";
         int countColumnMetadata = 0; 
-        String primarykeys = "";
+        List<String> primarykeys = null;
         String csvColumns = "";
         String queryGetRows = "";
-        int count = 0;
-        
+        int count_RSNEW = 0;
+                
         for(String thisCol : thisTablesColumns){
             String[] colNames = thisCol.split("\\|");
             columnNames = columnNames + colNames[0];
@@ -168,51 +164,86 @@ public class MainClient {
         csvColumns = columnNames.toString().replace("[", "").replace("]", "").replace(", ", ",");
         queryGetRows = "SELECT " + csvColumns + " FROM " + tableName;
                 
-        System.out.println("queryGetRows: "+ queryGetRows);
-       
+        System.out.println("queryGetRows: "+ queryGetRows);       
         
         try {            
-            primarykeys = getThisTablesPrimaryKey(tableName);
-            if(primarykeys.length() > 0){
-                System.out.println("PRIMARY KEY: "+ primarykeys);
-            }else{             
-                System.out.println(ANSI_RED + "PRIMARY KEY: " + primarykeys + ANSI_RESET);
-            }
-            
+            primarykeys = getThisTablesPrimaryKey(tableName);                   
         } catch (Exception ex) {
             Logger.getLogger(MainClient.class.getName()).log(Level.SEVERE, null, ex);
         }
-
         
-        try {
-            stmt = conn_NEW.createStatement();
-            ResultSet rs = stmt.executeQuery(queryGetRows);
-            while (rs.next()) {
-                String[] colNames2 = columnNames.split("\\,");
-                String colVals = "";
-                int colCount = 0;
-                Map<String,String> thisRowsValsMap = new HashMap();
-                for (String col : colNames2){ 
-                    thisRowsValsMap.put(col, rs.getString(colNames2[colCount]));
-                    colCount++;
-                }   
-                count++;                
+        try {            
+            stmt_NEW = conn_NEW.createStatement();
+            ResultSet rs_NEW = stmt_NEW.executeQuery(queryGetRows);
+           
+            while (rs_NEW.next()) {            
+                process_NEWRS(rs_NEW, csvColumns, queryGetRows, primarykeys);                    
+                count_RSNEW++;                
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         } finally {
-            if (stmt != null) {
-                stmt.close();
+            if (stmt_NEW != null) {
+                stmt_NEW.close();
             }
         }
+        
         System.out.println("csvColumns:" + csvColumns);
-        System.out.println(tableName + " looped over " + count + " times.");
+        System.out.println(ANSI_GREEN + tableName + " looped over " + count_RSNEW + " times." + ANSI_RESET);
 
     }
+
+
+    private static void process_NEWRS(ResultSet rs_NEW, String csvColumns, String queryGetRows, List<String> primaryKeys) {
+        try {
+            Statement stmt_OLD = null;
+            
+            String[] colNames = csvColumns.split("\\,");
+            String colVals = "";
+            int colCount = 0;
+            Map<String,String> thisRowsValsMap = new HashMap();
+            String whereClause = " WHERE ";
+            
+            for (String col : colNames){                
+                thisRowsValsMap.put(col, rs_NEW.getString(colNames[colCount]));          
+                colCount++;
+            }
+            
+            //TODO we have to take into account deletetions in the new database. we have to find them in the old
+            
+            //At this point we have a row from the new databasse and we its values we now need to find the same 
+            //record in the old database and compare to possible update or insert (if not found).
+            int primaryKeyCount = 0;
+            if (primaryKeys.size() > 0) {                     
+                for (String primaryKey : primaryKeys) {
+                    if (primaryKeyCount > 0) {
+                        whereClause = whereClause + " AND ";
+                    } else {whereClause = whereClause + " ";}
+                    whereClause = whereClause + primaryKey + " = " + thisRowsValsMap.get(primaryKey);
+                    primaryKeyCount++;
+                }
+            } else {//USE ALL COLUMNS AS A PRIMARY KEY but not the best solution as we dont know if it is an insert or a create.
+                for (String primaryKey : colNames) {               
+                    if (primaryKeyCount > 0) {
+                        whereClause = whereClause + " AND ";
+                    } else {whereClause = whereClause + " ";}
+                    whereClause = whereClause + primaryKey + " = " + thisRowsValsMap.get(primaryKey);
+                    primaryKeyCount++;                                    
+                }
+            }
+
+            stmt_OLD = conn_OLD.createStatement();
+            ResultSet rs_OLD = stmt_OLD.executeQuery(queryGetRows+whereClause);
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(MainClient.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+ 
     
-    //Get a tables priary keys (it only comes back as a comma delimeted list)
-    private static String getThisTablesPrimaryKey(String tablename) throws Exception {     
-                
+    private static List<String> getThisTablesPrimaryKey(String tablename) throws Exception {     
+        
+        List<String> keys = new ArrayList<String>();        
         String key = "";
         Statement stmt = null;
         String queryGetColumns = "SELECT COLUMN_LIST FROM INFORMATION_SCHEMA.CONSTRAINTS WHERE TABLE_NAME = '" + tablename + "' AND CONSTRAINT_TYPE='PRIMARY KEY'";
@@ -225,14 +256,30 @@ public class MainClient {
                 key = rs.getString("COLUMN_LIST");  
             }
             
+            if(key.length() > 0){
+                String[] colNames = key.split("\\,");
+
+                for (String col : colNames){                
+                    keys.add(col);               
+                }
+            }
+            
+            if(keys.isEmpty()){
+                System.out.println(ANSI_RED + "PRIMARY KEY: " + keys.toString() + ANSI_RESET);                
+            }else{             
+                System.out.println("PRIMARY KEY: "+ keys.toString());
+            }     
+            
+            
         } catch (SQLException e ) {
             System.out.println(e.getMessage());
         } finally {
             if (stmt != null) { stmt.close(); }
         }
         
-        return key;     
+        return keys;     
     }
+    
     
 }
 
